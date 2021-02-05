@@ -19,10 +19,13 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 
+DATA_DIR = os.path.join("..", "data", "raw")
+FIGURES_DIR = os.path.join("..", "reports", "figures")
+
 
 def load_and_clean_data() -> pd.DataFrame:
     # Loading the CSV with pandas
-    df = pd.read_csv(os.path.join("..", "data", "raw", "churn-bigml-80.csv"))
+    df = pd.read_csv(os.path.join(DATA_DIR, "churn-bigml-80.csv"))
 
     # create dummies
     df["Churn"] = df["Churn"].astype(int)
@@ -38,7 +41,11 @@ def load_and_clean_data() -> pd.DataFrame:
 
 def explorative_visualization(df: pd.DataFrame) -> None:
     # pairs plot
-    sns.pairplot(df.sample(100, random_state=1))
+    # TODO: this visualization takes very long - refactor somehow
+    sns_plot = sns.pairplot(df.sample(100, random_state=1))
+    fig = sns_plot.get_figure()
+    fig.savefig(os.path.join(FIGURES_DIR, "pairs_plot.png"))
+    return
 
 
 def plot_result(model, X_train, X_test, y_train, y_test, model_name: str = "Name of model") -> plt.Figure:
@@ -92,7 +99,7 @@ if __name__ == "__main__":
     df = load_and_clean_data()
 
     # explorative visualization
-    #explorative_visualization(df)
+    # explorative_visualization(df)
 
     # forecasting churn
     y = df["Churn"].values
@@ -105,9 +112,10 @@ if __name__ == "__main__":
     lr_model = LogisticRegression()
     lr_model.fit(X_train, y_train)
 
-    plot_result(model=lr_model,
+    fig = plot_result(model=lr_model,
                 X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test,
                 model_name="Logistic regression")
+    fig.savefig(os.path.join(FIGURES_DIR, "logistic_regression.png"))
 
     # random forest
     # Instantiate model with 1000 decision trees
@@ -116,6 +124,7 @@ if __name__ == "__main__":
     # Train the model on training data
     rf_model.fit(X_train, y_train)
 
-    plot_result(model=rf_model,
+    fig = plot_result(model=rf_model,
                 X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test,
                 model_name="Random forest")
+    fig.savefig(os.path.join(FIGURES_DIR, "random_forest.png"))

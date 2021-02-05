@@ -87,3 +87,8 @@ target/
 
 # Mypy cache
 .mypy_cache/
+
+# exclude reports and figures from source control
+/reports/figures/
+*.jpg
+*.png
