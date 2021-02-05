@@ -1,0 +1,13 @@
+name: churn
+channels:
+  - conda-forge
+  - plotly
+  - defaults
+dependencies:
+  - python=3.8.5
+  - pandas=1.2.1
+  - matplotlib=3.3.2
+  - seaborn=0.11.1
+  - scikit-learn=0.23.2
+  - scipy=1.5.2
+
