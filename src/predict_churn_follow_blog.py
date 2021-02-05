@@ -5,6 +5,9 @@ https://towardsdatascience.com/hands-on-predict-customer-churn-5c2a42806266
 It uses the Telecom churn dataset, which can be downloaded at:
 https://www.kaggle.com/mnassrib/telecom-churn-datasets
 
+Check this link for XGboost introduction:
+https://www.datacamp.com/community/tutorials/xgboost-in-python
+
 Author: Hans Weda, Rond consulting
 Date: 5 february 2021
 """
@@ -73,6 +76,7 @@ def plot_result(model, X_train, X_test, y_train, y_test, model_name: str = "Name
     )
     axs[0].set_xlabel("Feature")
     axs[0].set_ylabel("Weigth")
+    axs[0].set_title("Top 10 important features")
 
     y_pred_proba = model.predict_proba(X_test)[:, 1]
     fpr, tpr, _ = metrics.roc_curve(y_test,  y_pred_proba)
@@ -100,7 +104,7 @@ if __name__ == "__main__":
     df = load_and_clean_data()
 
     # explorative visualization
-    # explorative_visualization(df)
+    #explorative_visualization(df)
 
     # forecasting churn
     y = df["Churn"].values
