@@ -18,6 +18,7 @@ from sklearn import metrics
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
+import xgboost as xgb
 
 DATA_DIR = os.path.join("..", "data", "raw")
 FIGURES_DIR = os.path.join("..", "reports", "figures")
@@ -113,8 +114,8 @@ if __name__ == "__main__":
     lr_model.fit(X_train, y_train)
 
     fig = plot_result(model=lr_model,
-                X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test,
-                model_name="Logistic regression")
+                      X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test,
+                      model_name="Logistic regression")
     fig.savefig(os.path.join(FIGURES_DIR, "logistic_regression.png"))
 
     # random forest
@@ -125,6 +126,24 @@ if __name__ == "__main__":
     rf_model.fit(X_train, y_train)
 
     fig = plot_result(model=rf_model,
-                X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test,
-                model_name="Random forest")
+                      X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test,
+                      model_name="Random forest")
     fig.savefig(os.path.join(FIGURES_DIR, "random_forest.png"))
+
+    # xgboost
+    xg_model = xgb.XGBClassifier(
+        objective='binary:logistic',
+        colsample_bytree=0.3,
+        learning_rate=0.1,
+        max_depth=5,
+        alpha=10,
+        n_estimators=10
+    )
+
+    # Train the model on training data
+    xg_model.fit(X_train, y_train)
+
+    fig = plot_result(model=xg_model,
+                      X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test,
+                      model_name="XGBoost")
+    fig.savefig(os.path.join(FIGURES_DIR, "xg_boost.png"))
