@@ -56,8 +56,10 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
             'Churn'
         ]], drop_first=True
     )
-    df = dummies.join(df[['MonthlyCharges', 'TotalCharges']])
-    df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce")
+    df = dummies.join(df[['MonthlyCharges']])
+    #df = dummies.join(df[['MonthlyCharges', 'TotalCharges']])
+    #df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce")
+    #df["TotalChargesSquared"] = df["TotalCharges"]**2
     # remove nans
     # ToDo: statistics on amount of nans, or something clever on replacing nans
     df = df.dropna()
