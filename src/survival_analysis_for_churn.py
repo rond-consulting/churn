@@ -34,6 +34,30 @@ from src.data.data_utils import load_from_kaggle
 
 
 def clean_data(df: pd.DataFrame) -> pd.DataFrame:
+
+    # set Customer id as index
+    df = df.set_index('customerID')
+
+    # remove 0 tenure to aviod no-positive issues in fitters
+    df = df[df["tenure"] > 0]
+
+    # divide total charges by tenure to get a sensible quantity
+    df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce")
+    # remove nans
+    # ToDo: statistics on amount of nans, or something clever on replacing nans
+    df = df.dropna()
+    df["TotalChargesByTenure"] = df["TotalCharges"] / df["tenure"]
+    df = df.drop(columns="TotalCharges")
+
+    # Following: https://github.com/CamDavidsonPilon/lifelines/blob/master/examples/Customer%20Churn.ipynb
+    #
+    # The dataset is naturally hierarchical: some columns only apply to some users. Ex, if you don't have internet
+    # then the column OnlineBackup isn't applicable, as it's value is "No internet service". We
+    # are going to map this back to No. We will treat the hierachical nature by stratifying on the
+    # different services a user may have.
+    df = df.applymap(lambda x: "No" if str(x).startswith("No ") else x)
+    df['Churn'] = (df['Churn'] == "Yes")
+    '''
     dummies = pd.get_dummies(
         df[[
             'gender',
@@ -58,11 +82,7 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     )
     df = dummies.join(df[['MonthlyCharges']])
     #df = dummies.join(df[['MonthlyCharges', 'TotalCharges']])
-    #df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce")
-    #df["TotalChargesSquared"] = df["TotalCharges"]**2
-    # remove nans
-    # ToDo: statistics on amount of nans, or something clever on replacing nans
-    df = df.dropna()
+    '''
     return df
 
 

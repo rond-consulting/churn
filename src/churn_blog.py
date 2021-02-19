@@ -10,7 +10,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from lifelines import CoxPHFitter, KaplanMeierFitter
+from lifelines import CoxPHFitter, KaplanMeierFitter, WeibullAFTFitter
 from lifelines.plotting import plot_lifetimes
 from matplotlib.lines import Line2D
 from numpy.random import default_rng
@@ -48,38 +48,50 @@ def _determine_end_idx(row):
 
 
 def plot_overview(df_plot):
-    fig, ax = plt.subplots(1, 1)
+    fig, (ax_main, ax_legend) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]}, figsize=(10, 5))
     plot_lifetimes(
         durations=df_plot["tenure"],
         event_observed=(df_plot["Churn"] == "Yes"),
         entry=df_plot["start_idx"],
         sort_by_duration=False,
-        ax=ax
+        ax=ax_main
     )
     # create zombie lines for the legend
-    lin1 = Line2D([0, 1], [0, 1], color=[0.20392157, 0.54117647, 0.74117647, 1.])
-    lin2 = Line2D([0, 1], [0, 1], color=[0.65098039, 0.02352941, 0.15686275, 1.])
-    ax.legend([lin1, lin2], ['Existing customer', 'Churned customer'], loc="lower left")
+    zombie_lines = [
+        Line2D([0, 1], [0, 1], color=[0.20392157, 0.54117647, 0.74117647, 1.]),
+        Line2D([0, 1], [0, 1], color=[0.65098039, 0.02352941, 0.15686275, 1.])
+        ]
+    legend_labels = ['Existing customer', 'Churned customer']
 
     # add vertical dashed line
-    ax.axvline(observation_idx, color='darkgrey', linestyle='--')
-    ax.set_xlim(ax.get_xlim()[0], ax.get_xlim()[1]+80)
+    ax_main.axvline(observation_idx, color='darkgrey', linestyle='--')
     if "remaining_life" in df_plot.columns:
         # plot remaining life
+        ax_main.set_xlim(ax.get_xlim()[0], ax.get_xlim()[1] + 80)
         temp = df_plot[df_plot["Churn"] == "No"].copy()
-        temp["remaining_life"] = temp.apply(lambda row: 180 if row["remaining_life"] > 80 else 100+row["remaining_life"], axis=1)
-        ax.hlines(y=temp.index, xmin=100, xmax=temp["remaining_life"], linestyle='--', color="purple")
+        temp["remaining_life"] = temp.apply(
+            lambda row: 180 if row["remaining_life"] > 80 else 100+row["remaining_life"],
+            axis=1
+        )
+        lc = ax_main.hlines(y=temp.index, xmin=100, xmax=temp["remaining_life"], linestyle='--', color="purple")
+        idx_max = 172
+        zombie_lines.append(lc)
+        legend_labels.append('Forecasted membership')
     else:
-        ax.text(observation_idx+10, sum(ax.get_ylim())/2, "?", fontsize=40)
+        ax_main.set_xlim(ax_main.get_xlim()[0], ax_main.get_xlim()[1] + 20)
+        ax_main.text(observation_idx+10, sum(ax_main.get_ylim())/2, "?", fontsize=40)
+        idx_max = 112
 
+    # set legend
+    ax_legend.legend(zombie_lines, legend_labels, loc="upper center")
+    ax_legend.axis("off")
     # set axis labels
-    ax.set_ylabel("Customer ID")
-    ax.set_xlabel("Date")
-    idx_max = 112
-    ax.set_xticks(np.arange(idx_max % 12, idx_max+1, 12))
-    ax.set_xticklabels(
+    ax_main.set_ylabel("Customer ID")
+    ax_main.set_xlabel("Date")
+    ax_main.set_xticks(np.arange(idx_max % 12, idx_max+1, 12))
+    ax_main.set_xticklabels(
         [date.strftime("%Y-%m-%d") for date in pd.date_range(
-            end=observation_date + pd.DateOffset(years=1),
+            end=observation_date + pd.DateOffset(years=(idx_max-100)//12),
             freq="12MS",
             periods=(idx_max//12)+1
         )],
@@ -131,10 +143,12 @@ if __name__ == "__main__":
         target="Churn_Yes",
         thresh=100
     )
-
-    cph = CoxPHFitter()
+    df_surv = df_surv[df_surv["tenure"]>0]
+#    cph = CoxPHFitter()
+    cph = WeibullAFTFitter()
     cph_train, cph_test = train_test_split(df_surv, test_size=0.2)
-    cph.fit(cph_train, 'tenure', 'Churn_Yes', strata=["Contract_Two year", "Contract_One year"])
+    cph.fit(cph_train, 'tenure', 'Churn_Yes')#, strata=["Contract_Two year", "Contract_One year"])
+    '''
     fig, ax = plt.subplots(1, 1)
     cph.baseline_survival_.rename(
         columns={
@@ -148,7 +162,9 @@ if __name__ == "__main__":
     fig.savefig(os.path.join(FIGURES_DIR, 'CoxPH_plot_vs_contract.png'))
 
     cph.check_assumptions(cph_train)
-
+    '''
+    cph.plot_partial_effects_on_outcome(["Contract_One year", "Contract_Two year"], values=[[0, 0], [0, 1], [1, 0]],
+                                        plot_baseline=False)
     # brier loss curve
     loss_dict = {}
     for i in range(1, 73):
