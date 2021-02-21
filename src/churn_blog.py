@@ -22,6 +22,7 @@ from src.models.model_utils import remove_collinear_variables
 from src.survival_analysis_for_churn import clean_data
 from sksurv.ensemble import RandomSurvivalForest
 from sksurv.util import Surv
+import seaborn as sns
 
 observation_idx = 100
 idx_range = np.linspace(0, 12)
@@ -267,13 +268,30 @@ if __name__ == "__main__":
     fig = plot_overview(df_plot=df.join(remaining_life).head(20))
     fig.savefig(os.path.join(FIGURES_DIR, "overview_prediction.png"))
 
+    # result
+    print(waft.print_summary())
+    fig, ax = plt.subplots()
+    waft.plot()
+    plt.tight_layout()
+    fig.savefig(os.path.join(FIGURES_DIR, 'coefficients_waft.png'))
     plt.show()
 
-    # result
-    print(cph.print_summary())
-    cph.plot()
-    plt.tight_layout()
-    plt.show()
+    # customer value
+    df_surv_upgrade = df_surv.copy()
+    df_surv_upgrade["Contract_Two year"] = 1
+    df_surv_upgrade["Contract_One year"] = 0
+    remaining_life_upgrade = waft.predict_median(df_surv_upgrade, conditional_after=last_obs)
+    remaining_life_upgrade.name = "remaining_life"
+
+    df_upgrade = df.join(remaining_life_upgrade)
+    df["Upgrade"] = "baseline"
+    df_upgrade["Upgrade"] = "Upgrade"
+
+    df_plot = df.join(remaining_life).append(df_upgrade)
+    df_plot["CustomerValue"] = df_plot["remaining_life"] * df_plot["MonthlyCharges"]
+
+    sns.displot(df_plot[df_plot["Churn"] == "No"], x="remaining_life", hue="Upgrade", kind="kde", fill=True)
+
     print("finished!")
 
     # https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html?highlight=best#prediction-on-censored-subjects
