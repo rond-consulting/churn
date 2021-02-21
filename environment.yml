@@ -16,3 +16,4 @@ dependencies:
   - python-dotenv=0.15.0
   - lifelines=0.25.9
   - formulaic=0.2.3
+  - scikit-survival=0.14.0

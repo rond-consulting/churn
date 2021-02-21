@@ -36,7 +36,7 @@ from src.data.data_utils import load_from_kaggle
 def clean_data(df: pd.DataFrame) -> pd.DataFrame:
 
     # set Customer id as index
-    df = df.set_index('customerID')
+    df = df.drop(columns='customerID')
 
     # remove 0 tenure to aviod no-positive issues in fitters
     df = df[df["tenure"] > 0]
@@ -56,15 +56,12 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     # are going to map this back to No. We will treat the hierachical nature by stratifying on the
     # different services a user may have.
     df = df.applymap(lambda x: "No" if str(x).startswith("No ") else x)
-    df['Churn'] = (df['Churn'] == "Yes")
-    '''
     dummies = pd.get_dummies(
         df[[
             'gender',
             'SeniorCitizen',
             'Partner',
             'Dependents',
-            'tenure',
             'PhoneService',
             'MultipleLines',
             'InternetService',
@@ -80,9 +77,7 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
             'Churn'
         ]], drop_first=True
     )
-    df = dummies.join(df[['MonthlyCharges']])
-    #df = dummies.join(df[['MonthlyCharges', 'TotalCharges']])
-    '''
+    df = dummies.join(df[["tenure", "MonthlyCharges", "TotalChargesByTenure"]])
     return df
 
 
