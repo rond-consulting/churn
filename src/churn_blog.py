@@ -290,21 +290,76 @@ if __name__ == "__main__":
     fig.savefig(os.path.join(FIGURES_DIR, 'coefficients_waft.png'))
     plt.show()
 
-    # customer value
-    df_surv_upgrade = df_surv.copy()
-    df_surv_upgrade["Contract_Two year"] = 1
-    df_surv_upgrade["Contract_One year"] = 0
-    remaining_life_upgrade = waft.predict_median(df_surv_upgrade, conditional_after=last_obs)
-    remaining_life_upgrade.name = "remaining_life"
+    upgrades = [
+        {"Contract_Two year": 1, "Contract_One year": 0},
+        {"InternetService_No": 1},
+        {"OnlineSecurity_Yes": 1},
+        {"PaymentMethod_Electronic check": 0,
+         "PaymentMethod_Mailed check": 0,
+         "PaymentMethod_Credit card (automatic)": 0},
+        {"OnlineBackup_Yes": 1}
+    ]
+    upgrade_labels = [
+        "Contract duration of two years",
+        "InternetService downgrade",
+        "Adding online security",
+        "Payment by automatic bank transfer",
+        "Adding online backup"
+    ]
 
-    df_upgrade = df.join(remaining_life_upgrade)
-    df["Upgrade"] = "baseline"
-    df_upgrade["Upgrade"] = "Upgrade"
+    results = list()
+    for upgrade, upgrade_label in zip(upgrades, upgrade_labels):
+        # customer remaining life default
+        remaining_life = waft.predict_median(df_surv, conditional_after=last_obs)
+        remaining_life.name = "remaining_life"
+        df_upgrade = df.join(remaining_life)
 
-    df_plot = df.join(remaining_life).append(df_upgrade)
-    df_plot["CustomerValue"] = df_plot["remaining_life"] * df_plot["MonthlyCharges"]
+        # customer remaining life after upgrade
+        df_surv_upgrade = df_surv.copy()
+        for key in upgrade:
+            df_surv_upgrade[key] = upgrade[key]
+        remaining_life_upgrade = waft.predict_median(df_surv_upgrade, conditional_after=last_obs)
+        remaining_life_upgrade.name = "remaining_life_upgrade"
 
-    sns.displot(df_plot[df_plot["Churn"] == "No"], x="remaining_life", hue="Upgrade", kind="kde", fill=True)
+        df_upgrade = df_upgrade.join(remaining_life_upgrade)
+
+        fig, ax = plt.subplots()
+        sns.kdeplot(df_upgrade[df_upgrade["Churn"] == "No"]["remaining_life"], fill=True, ax=ax, label="Unchanged")
+        sns.kdeplot(df_upgrade[df_upgrade["Churn"] == "No"]["remaining_life_upgrade"], fill=True, ax=ax, label="Upgrade")
+        ax.legend()
+        ax.set_xlabel("Remaining subscription [months]")
+        fig.savefig(os.path.join(FIGURES_DIR, 'life_{}.png'.format(upgrade_label)))
+
+        # customer value
+        df_upgrade["CustomerValue"] = df_upgrade["remaining_life"] * df_upgrade["MonthlyCharges"]
+        df_upgrade["CustomerValueUpgrade"] = df_upgrade["remaining_life_upgrade"] * df_upgrade["MonthlyCharges"]
+
+        results.append({
+            "label": "Unchanged",
+            "remaining_life": df_upgrade[df_upgrade["remaining_life"] < 12]["remaining_life"].mean(),
+            "CustomerValue": df_upgrade[df_upgrade["remaining_life"] < 12]["CustomerValue"].mean(),
+        })
+        results.append({
+            "label": upgrade_label,
+            "remaining_life": df_upgrade[df_upgrade["remaining_life"] < 12]["remaining_life_upgrade"].mean(),
+            "CustomerValue": df_upgrade[df_upgrade["remaining_life"] < 12]["CustomerValueUpgrade"].mean()
+        })
+
+        print(
+            df_upgrade[df_upgrade["remaining_life"] < 12][["remaining_life", "remaining_life_upgrade"]].describe()
+        )
+
+        print(
+            df_upgrade[df_upgrade["remaining_life"] < 12][["CustomerValue", "CustomerValueUpgrade"]].describe()
+        )
+
+    fig, ax = plt.subplots()
+    pd.DataFrame(results).drop_duplicates().set_index('label').plot.barh(y='CustomerValue', ax=ax, legend=None)
+    ax.set_xlabel("Customer Value")
+    ax.set_ylabel("")
+    ax.set_title("Customer value\nby different contract upgrades")
+    plt.tight_layout()
+    fig.savefig(os.path.join(FIGURES_DIR, 'upgrade_effects.png'))
 
     print("finished!")
 
