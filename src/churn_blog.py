@@ -20,6 +20,7 @@ from lifelines.calibration import survival_probability_calibration
 from src.data.data_utils import load_from_kaggle
 from src.models.model_utils import remove_collinear_variables
 from src.survival_analysis_for_churn import clean_data
+from sklearn.inspection import plot_partial_dependence
 from sksurv.ensemble import RandomSurvivalForest
 from sksurv.util import Surv
 import seaborn as sns
@@ -245,6 +246,19 @@ if __name__ == "__main__":
                                random_state=random_state)
     rsf.fit(X_train, y_train)
     print("Concordance index random forest: {}".format(rsf.score(X_test, y_test)))
+
+    fig, ax = plt.subplots(1, 1)
+    for one, two in [(0, 0), (1, 0), (0, 1)]:
+        X_temp = X_train
+        X_temp["Contract_One year"] = one
+        X_temp["Contract_Two year"] = two
+        surv = rsf.predict_survival_function(X_temp, return_array=True)
+        ax.plot(surv.mean(axis=0))
+    ax.set_xlabel("Subscription time [months]")
+    ax.set_ylabel("Subscription probability")
+    ax.set_title('Random Survival Forest Survival Curve by Contract Duration')
+    ax.legend(labels=["Monthly", "One year", "Two year"])
+    fig.savefig(os.path.join(FIGURES_DIR, 'SurvivalForest_plot_vs_contract.png'))
 
     # brier scores
     fig = brier_scores(df_test, X_test, [cph, waft, rsf], ["Cox PH", "Weibull AFT", "Random forest"])
