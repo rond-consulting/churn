@@ -25,6 +25,7 @@ from sksurv.ensemble import RandomSurvivalForest
 from sksurv.util import Surv
 import seaborn as sns
 
+
 observation_idx = 100
 idx_range = np.linspace(0, 12)
 
@@ -51,7 +52,16 @@ def _determine_end_idx(row):
     return out
 
 
-def plot_overview(df_plot):
+def plot_overview(df_plot: pd.DataFrame):
+    """
+    Generates plot showing survival times including forecasts
+
+    Parameters:
+        df_plot: a pandas dataframe consisting observed and predicted trajectories
+
+    Returns:
+        fig: a figure displaying survival times for a subset of customers
+    """
     fig, (ax_main, ax_legend) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]}, figsize=(10, 5))
     plot_lifetimes(
         durations=df_plot["tenure"],
@@ -108,7 +118,14 @@ def plot_overview(df_plot):
 
 
 def kaplan_meier_plots(df: pd.DataFrame) -> None:
-    # survival analysis KaplanMeier
+    """
+    Generates plot for Kaplan-Meier Curves.
+
+    Parameters:
+        df: a dataframe containing data
+    Returns:
+        None
+    """
     kmf = KaplanMeierFitter()
     kmf.fit(durations=df['tenure'], event_observed=df["Churn"] == "Yes")
     fig, ax = plt.subplots(1, 1)
@@ -133,7 +150,21 @@ def kaplan_meier_plots(df: pd.DataFrame) -> None:
 
 
 def brier_scores(df_test: pd.DataFrame, X_test, models: list, labels: list) -> plt.Figure:
-    # brier loss curve
+    """
+    Calculates Brier scores over the test set.
+
+    Parameters:
+        df_test: pandas DataFrame containing data on customers part of the test set
+        X_test
+        models: A list of survival models for which Brier scores need to be calculated
+        labels:
+
+    Returns:
+        fig: a plot with Brier scores
+
+    """
+
+
     loss_list = list()
     for i in range(1, 73):
         scores = list()
@@ -167,7 +198,6 @@ def brier_scores(df_test: pd.DataFrame, X_test, models: list, labels: list) -> p
 if __name__ == "__main__":
     # loading from kaggle
     df = load_from_kaggle(owner="blastchar", dataset_name="telco-customer-churn")
-
     # overview
     df["end_idx"] = df.apply(_determine_end_idx, axis=1)
     df["start_idx"] = df["end_idx"] - df["tenure"]
@@ -280,6 +310,7 @@ if __name__ == "__main__":
     remaining_life.name = "remaining_life"
 
     fig = plot_overview(df_plot=df.join(remaining_life).head(20))
+    
     fig.savefig(os.path.join(FIGURES_DIR, "overview_prediction.png"))
 
     # result
