@@ -10,17 +10,15 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from lifelines import CoxPHFitter, KaplanMeierFitter, WeibullAFTFitter
+from lifelines import CoxPHFitter, WeibullAFTFitter
 
 from numpy.random import default_rng
 
 from sklearn.model_selection import train_test_split
 from lifelines.calibration import survival_probability_calibration
 from src.data.data_utils import load_from_kaggle
-from src.models.model_utils import remove_collinear_variables
-from src.visualization.generate_blog_plots import plot_overview, brier_scores
+from src.visualization.generate_blog_plots import plot_overview, brier_scores, kaplan_meier_plots, plot_coxph_stratified_baselines
 from src.survival_analysis_for_churn import clean_data
-from sklearn.inspection import plot_partial_dependence
 from sksurv.ensemble import RandomSurvivalForest
 from sksurv.util import Surv
 import seaborn as sns
@@ -28,10 +26,7 @@ import seaborn as sns
 
 
 idx_range = np.linspace(0, 12)
-
-
 rng = default_rng(321)
-
 FIGURES_DIR = os.path.join("..", "reports", "figures")
 
 
@@ -42,40 +37,6 @@ def _determine_end_idx(row):
     else:
         out = 100 - rng.integers(len(idx_range))
     return out
-
-
-
-def kaplan_meier_plots(df: pd.DataFrame) -> None:
-    """
-    Generates plot for Kaplan-Meier Curves.
-
-    Parameters:
-        df: a dataframe containing data
-    Returns:
-        None
-    """
-    kmf = KaplanMeierFitter()
-    kmf.fit(durations=df['tenure'], event_observed=df["Churn"] == "Yes")
-    fig, ax = plt.subplots(1, 1)
-    kmf.plot_survival_function(at_risk_counts=True, ax=ax)
-    plt.tight_layout()
-    ax.set_xlabel("Subscription time [months]")
-    ax.set_ylabel("Subscription probability")
-    fig.savefig(os.path.join(FIGURES_DIR, 'KaplanMeier_plot.png'))
-
-    # survival analysis KaplanMeier per Contract duration
-    fig, ax = plt.subplots(1, 1)
-    for key, gr in df.groupby("Contract"):
-        kmf = KaplanMeierFitter()
-        kmf.fit(durations=gr['tenure'], event_observed=gr["Churn"] == "Yes")
-        kmf.plot_survival_function(ax=ax, label=key)
-    ax.set_xlabel("Subscription time [months]")
-    ax.set_ylabel("Subscription probability")
-    ax.set_title('Kaplan-Meier Survival Curve by Contract Duration')
-    fig.savefig(os.path.join(FIGURES_DIR, 'KaplanMeier_plot_vs_contract.png'))
-
-    return
-
 
 if __name__ == "__main__":
     # loading from kaggle
@@ -88,7 +49,7 @@ if __name__ == "__main__":
     fig.savefig(os.path.join(FIGURES_DIR, "overview_data.png"))
 
     # Kaplan-Meier
-    kaplan_meier_plots(df)
+    kaplan_meier_plots(df, FIGURES_DIR)
 
     # clean the data
     df_surv = clean_data(df)
@@ -117,18 +78,7 @@ if __name__ == "__main__":
     cph = CoxPHFitter()
     cph.fit(df_train, 'tenure', 'Churn_Yes', strata=["Contract_Two year", "Contract_One year"])
     print("Concordance index Cox PH: {}".format(cph.score(df_test, scoring_method="concordance_index")))
-
-    fig, ax = plt.subplots(1, 1)
-    cph.baseline_survival_.rename(
-        columns={
-            (0, 0): 'Monthly',
-            (1, 0): 'Two year',
-            (0, 1): 'One year'
-        }).plot(ax=ax)
-    ax.set_xlabel("Subscription time [months]")
-    ax.set_ylabel("Subscription probability")
-    ax.set_title('CoxPH Survival Curve by Contract Duration')
-    fig.savefig(os.path.join(FIGURES_DIR, 'CoxPH_plot_vs_contract.png'))
+    plot_coxph_stratified_baselines(cph, FIGURES_DIR)
 
     cph.check_assumptions(df_train)
 

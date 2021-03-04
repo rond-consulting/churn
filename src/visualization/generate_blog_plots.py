@@ -4,6 +4,9 @@ from lifelines.plotting import plot_lifetimes
 from matplotlib.lines import Line2D
 import numpy as np
 from sklearn.metrics import brier_score_loss
+from lifelines import KaplanMeierFitter
+import os
+
 
 
 observation_idx = 100
@@ -124,3 +127,47 @@ def brier_scores(df_test: pd.DataFrame, X_test, models: list, labels: list) -> p
     loss_df.plot(ax=ax)
     ax.set(xlabel='Prediction Time', ylabel='Calibration Loss', title='Calibration Loss by Time')
     return fig
+
+def kaplan_meier_plots(df: pd.DataFrame, FIGURES_DIR: str) -> None:
+    """
+    Generates plot for Kaplan-Meier Curves.
+
+    Parameters:
+        df: a dataframe containing data
+    Returns:
+        None
+    """
+    kmf = KaplanMeierFitter()
+    kmf.fit(durations=df['tenure'], event_observed=df["Churn"] == "Yes")
+    fig, ax = plt.subplots(1, 1)
+    kmf.plot_survival_function(at_risk_counts=True, ax=ax)
+    plt.tight_layout()
+    ax.set_xlabel("Subscription time [months]")
+    ax.set_ylabel("Subscription probability")
+    fig.savefig(os.path.join(FIGURES_DIR, 'KaplanMeier_plot.png'))
+
+    # survival analysis KaplanMeier per Contract duration
+    fig, ax = plt.subplots(1, 1)
+    for key, gr in df.groupby("Contract"):
+        kmf = KaplanMeierFitter()
+        kmf.fit(durations=gr['tenure'], event_observed=gr["Churn"] == "Yes")
+        kmf.plot_survival_function(ax=ax, label=key)
+    ax.set_xlabel("Subscription time [months]")
+    ax.set_ylabel("Subscription probability")
+    ax.set_title('Kaplan-Meier Survival Curve by Contract Duration')
+    fig.savefig(os.path.join(FIGURES_DIR, 'KaplanMeier_plot_vs_contract.png'))
+
+    return
+
+def plot_coxph_stratified_baselines(cph, FIGURES_DIR: str) -> None:
+    fig, ax = plt.subplots(1, 1)
+    cph.baseline_survival_.rename(
+        columns={
+            (0, 0): 'Monthly',
+            (1, 0): 'Two year',
+            (0, 1): 'One year'
+        }).plot(ax=ax)
+    ax.set_xlabel("Subscription time [months]")
+    ax.set_ylabel("Subscription probability")
+    ax.set_title('CoxPH Survival Curve by Contract Duration')
+    fig.savefig(os.path.join(FIGURES_DIR, 'CoxPH_plot_vs_contract.png'))
