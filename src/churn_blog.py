@@ -151,17 +151,17 @@ def kaplan_meier_plots(df: pd.DataFrame) -> None:
 
 def brier_scores(df_test: pd.DataFrame, X_test, models: list, labels: list) -> plt.Figure:
     """
-    Calculates Brier scores over the test set.
+    Calculates Brier score losses over the test set.
+    In a survival setting, Brier scores represent the average squared distance between
+    the observed survival status and the predicted survival probability.
 
     Parameters:
-        df_test: pandas DataFrame containing data on customers part of the test set
-        X_test
+        df_test: pandas DataFrame containing test data on customers with ALL columns
+        X_test:  pandas DataFrame containing test data on customers only with feature columns (no survival time or event indicator)
         models: A list of survival models for which Brier scores need to be calculated
-        labels:
-
+        labels: Labels for the legends
     Returns:
-        fig: a plot with Brier scores
-
+        fig: a plot with Brier scores losses for each inputted model
     """
 
 
