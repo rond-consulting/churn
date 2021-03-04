@@ -17,7 +17,8 @@ from numpy.random import default_rng
 from sklearn.model_selection import train_test_split
 from lifelines.calibration import survival_probability_calibration
 from src.data.data_utils import load_from_kaggle
-from src.visualization.generate_blog_plots import plot_overview, brier_scores, kaplan_meier_plots, plot_coxph_stratified_baselines
+from src.visualization.generate_blog_plots import plot_overview, brier_scores, \
+    kaplan_meier_plots, plot_coxph_stratified_survival_functions
 from src.survival_analysis_for_churn import clean_data
 from sksurv.ensemble import RandomSurvivalForest
 from sksurv.util import Surv
@@ -78,7 +79,7 @@ if __name__ == "__main__":
     cph = CoxPHFitter()
     cph.fit(df_train, 'tenure', 'Churn_Yes', strata=["Contract_Two year", "Contract_One year"])
     print("Concordance index Cox PH: {}".format(cph.score(df_test, scoring_method="concordance_index")))
-    plot_coxph_stratified_baselines(cph, FIGURES_DIR)
+    plot_coxph_stratified_survival_functions(cph, FIGURES_DIR)
 
     cph.check_assumptions(df_train)
 

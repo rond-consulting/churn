@@ -134,6 +134,7 @@ def kaplan_meier_plots(df: pd.DataFrame, FIGURES_DIR: str) -> None:
 
     Parameters:
         df: a dataframe containing data
+        FIGURES_DIR: a string specifying path for figures
     Returns:
         None
     """
@@ -159,7 +160,16 @@ def kaplan_meier_plots(df: pd.DataFrame, FIGURES_DIR: str) -> None:
 
     return
 
-def plot_coxph_stratified_baselines(cph, FIGURES_DIR: str) -> None:
+def plot_coxph_stratified_survival_functions(cph, FIGURES_DIR: str) -> None:
+    """
+    Generates Cox PH non-parametric stratified survival function estimators and creates a plot
+
+    Parameters:
+        cph: a fitted Cox PH model
+        FIGURES_DIR: a string specifying path for figures
+    Returns:
+        None
+    """
     fig, ax = plt.subplots(1, 1)
     cph.baseline_survival_.rename(
         columns={
@@ -171,3 +181,5 @@ def plot_coxph_stratified_baselines(cph, FIGURES_DIR: str) -> None:
     ax.set_ylabel("Subscription probability")
     ax.set_title('CoxPH Survival Curve by Contract Duration')
     fig.savefig(os.path.join(FIGURES_DIR, 'CoxPH_plot_vs_contract.png'))
+
+    return None
