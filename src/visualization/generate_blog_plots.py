@@ -3,6 +3,8 @@ import pandas as pd
 from lifelines.plotting import plot_lifetimes
 from matplotlib.lines import Line2D
 import numpy as np
+from sklearn.metrics import brier_score_loss
+
 
 observation_idx = 100
 observation_date = pd.to_datetime("01-03-2021", format="%d-%m-%Y")
@@ -74,4 +76,51 @@ def plot_overview(df_plot: pd.DataFrame):
     )
 
     plt.tight_layout()
+    return fig
+
+def brier_scores(df_test: pd.DataFrame, X_test, models: list, labels: list) -> plt.Figure:
+    """
+    Calculates Brier score losses over the test set.
+    In a survival setting, Brier scores represent the average squared distance between
+    the observed survival status and the predicted survival probability.
+
+    Parameters:
+        df_test: pandas DataFrame containing test data on customers with ALL columns
+        X_test:  pandas DataFrame containing test data on customers only with feature columns (no survival time or event indicator)
+        models: A list of survival models for which Brier scores need to be calculated
+        labels: Labels for the legends
+    Returns:
+        fig: a plot with Brier scores losses for each inputted model
+    """
+
+    loss_list = list()
+    max_tenure = 73
+
+    for i in range(1, max_tenure):
+        scores = list()
+
+        for model in models:
+            if "lifelines" in model.__module__:
+                # lifelines model
+                scores.append(
+                    brier_score_loss(
+                        y_true=df_test['Churn_Yes'],
+                        y_prob=1 - model.predict_survival_function(df_test).loc[i].values,
+                        pos_label=1
+                    )
+                )
+            else:
+                # sklearn survival model
+                scores.append(
+                    brier_score_loss(
+                        y_true=df_test['Churn_Yes'],
+                        y_prob=1 - model.predict_survival_function(X_test, return_array=True)[:, i-1],
+                        pos_label=1
+                    )
+                )
+        loss_list.append([i] + scores)
+    loss_df = pd.DataFrame(loss_list, columns=["Time"] + labels).set_index("Time")
+    fig, ax = plt.subplots()
+    loss_df.plot(ax=ax)
+    ax.set(xlabel='Prediction Time', ylabel='Calibration Loss', title='Calibration Loss by Time')
     return fig

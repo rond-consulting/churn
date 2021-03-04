@@ -13,12 +13,12 @@ import pandas as pd
 from lifelines import CoxPHFitter, KaplanMeierFitter, WeibullAFTFitter
 
 from numpy.random import default_rng
-from sklearn.metrics import brier_score_loss
+
 from sklearn.model_selection import train_test_split
 from lifelines.calibration import survival_probability_calibration
 from src.data.data_utils import load_from_kaggle
 from src.models.model_utils import remove_collinear_variables
-from src.visualization.generate_blog_plots import plot_overview
+from src.visualization.generate_blog_plots import plot_overview, brier_scores
 from src.survival_analysis_for_churn import clean_data
 from sklearn.inspection import plot_partial_dependence
 from sksurv.ensemble import RandomSurvivalForest
@@ -28,9 +28,6 @@ import seaborn as sns
 
 
 idx_range = np.linspace(0, 12)
-
-
-
 
 
 rng = default_rng(321)
@@ -78,54 +75,6 @@ def kaplan_meier_plots(df: pd.DataFrame) -> None:
     fig.savefig(os.path.join(FIGURES_DIR, 'KaplanMeier_plot_vs_contract.png'))
 
     return
-
-
-def brier_scores(df_test: pd.DataFrame, X_test, models: list, labels: list) -> plt.Figure:
-    """
-    Calculates Brier score losses over the test set.
-    In a survival setting, Brier scores represent the average squared distance between
-    the observed survival status and the predicted survival probability.
-
-    Parameters:
-        df_test: pandas DataFrame containing test data on customers with ALL columns
-        X_test:  pandas DataFrame containing test data on customers only with feature columns (no survival time or event indicator)
-        models: A list of survival models for which Brier scores need to be calculated
-        labels: Labels for the legends
-    Returns:
-        fig: a plot with Brier scores losses for each inputted model
-    """
-
-    loss_list = list()
-    max_tenure = 73
-
-    for i in range(1, max_tenure):
-        scores = list()
-
-        for model in models:
-            if "lifelines" in model.__module__:
-                # lifelines model
-                scores.append(
-                    brier_score_loss(
-                        y_true=df_test['Churn_Yes'],
-                        y_prob=1 - model.predict_survival_function(df_test).loc[i].values,
-                        pos_label=1
-                    )
-                )
-            else:
-                # sklearn survival model
-                scores.append(
-                    brier_score_loss(
-                        y_true=df_test['Churn_Yes'],
-                        y_prob=1 - model.predict_survival_function(X_test, return_array=True)[:, i-1],
-                        pos_label=1
-                    )
-                )
-        loss_list.append([i] + scores)
-    loss_df = pd.DataFrame(loss_list, columns=["Time"] + labels).set_index("Time")
-    fig, ax = plt.subplots()
-    loss_df.plot(ax=ax)
-    ax.set(xlabel='Prediction Time', ylabel='Calibration Loss', title='Calibration Loss by Time')
-    return fig
 
 
 if __name__ == "__main__":
