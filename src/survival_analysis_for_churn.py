@@ -41,12 +41,8 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     # remove 0 tenure to aviod no-positive issues in fitters
     df = df[df["tenure"] > 0]
 
-    # divide total charges by tenure to get a sensible quantity
-    df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce")
-    # remove nans
-    # ToDo: statistics on amount of nans, or something clever on replacing nans
+    # Remove TotalCharges; this is not a sensible quantity to take into account
     df = df.dropna()
-    df["TotalChargesByTenure"] = df["TotalCharges"] / df["tenure"]
     df = df.drop(columns="TotalCharges")
 
     # Following: https://github.com/CamDavidsonPilon/lifelines/blob/master/examples/Customer%20Churn.ipynb
@@ -77,7 +73,7 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
             'Churn'
         ]], drop_first=True
     )
-    df = dummies.join(df[["tenure", "MonthlyCharges", "TotalChargesByTenure"]])
+    df = dummies.join(df[["tenure", "MonthlyCharges"]])
     return df
 
 

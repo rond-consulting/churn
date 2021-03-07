@@ -10,21 +10,18 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from lifelines import CoxPHFitter, WeibullAFTFitter
-
-from numpy.random import default_rng
-
-from sklearn.model_selection import train_test_split
 from lifelines.calibration import survival_probability_calibration
-from src.data.data_utils import load_from_kaggle
-from src.visualization.generate_blog_plots import plot_overview, brier_scores, \
-    kaplan_meier_plots, plot_coxph_stratified_survival_functions
-from src.survival_analysis_for_churn import clean_data
+from numpy.random import default_rng
+from sklearn.model_selection import train_test_split
 from sksurv.ensemble import RandomSurvivalForest
 from sksurv.util import Surv
-import seaborn as sns
 
-
+from src.data.data_utils import load_from_kaggle
+from src.survival_analysis_for_churn import clean_data
+from src.visualization.generate_blog_plots import plot_overview, brier_scores, \
+    kaplan_meier_plots, plot_coxph_stratified_survival_functions
 
 idx_range = np.linspace(0, 12)
 rng = default_rng(321)
@@ -38,6 +35,7 @@ def _determine_end_idx(row):
     else:
         out = 100 - rng.integers(len(idx_range))
     return out
+
 
 if __name__ == "__main__":
     # loading from kaggle
@@ -65,8 +63,10 @@ if __name__ == "__main__":
     '''
 
     # splitting
-    random_state=468
+    random_state = 468
     ## Maarten: Wat is het verschil tussen deze twee train_test_splits?
+    ## Hans: de lifelines functie heeft een dataframe nodig terwijl scikit-survival np-arrays nodig heeft.
+    # Daarom zijn er twee train-test-splits nodig
     df_train, df_test = train_test_split(df_surv, test_size=0.2, random_state=random_state)
     X_train, X_test, y_train, y_test = train_test_split(
         df_surv.drop(columns=["tenure", "Churn_Yes"]),
