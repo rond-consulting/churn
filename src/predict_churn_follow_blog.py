@@ -5,6 +5,9 @@ https://towardsdatascience.com/hands-on-predict-customer-churn-5c2a42806266
 It uses the Telecom churn dataset, which can be downloaded at:
 https://www.kaggle.com/mnassrib/telecom-churn-datasets
 
+Check this link for XGboost introduction:
+https://www.datacamp.com/community/tutorials/xgboost-in-python
+
 Author: Hans Weda, Rond consulting
 Date: 5 february 2021
 """
@@ -18,11 +21,15 @@ from sklearn import metrics
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
+import xgboost as xgb
+
+DATA_DIR = os.path.join("..", "data", "raw")
+FIGURES_DIR = os.path.join("..", "reports", "figures")
 
 
 def load_and_clean_data() -> pd.DataFrame:
     # Loading the CSV with pandas
-    df = pd.read_csv(os.path.join("..", "data", "raw", "churn-bigml-80.csv"))
+    df = pd.read_csv(os.path.join(DATA_DIR, "churn-bigml-80.csv"))
 
     # create dummies
     df["Churn"] = df["Churn"].astype(int)
@@ -38,7 +45,11 @@ def load_and_clean_data() -> pd.DataFrame:
 
 def explorative_visualization(df: pd.DataFrame) -> None:
     # pairs plot
-    sns.pairplot(df.sample(100, random_state=1))
+    # TODO: this visualization takes very long - refactor somehow
+    sns_plot = sns.pairplot(df.sample(100, random_state=1))
+    fig = sns_plot.get_figure()
+    fig.savefig(os.path.join(FIGURES_DIR, "pairs_plot.png"))
+    return
 
 
 def plot_result(model, X_train, X_test, y_train, y_test, model_name: str = "Name of model") -> plt.Figure:
@@ -65,6 +76,7 @@ def plot_result(model, X_train, X_test, y_train, y_test, model_name: str = "Name
     )
     axs[0].set_xlabel("Feature")
     axs[0].set_ylabel("Weigth")
+    axs[0].set_title("Top 10 important features")
 
     y_pred_proba = model.predict_proba(X_test)[:, 1]
     fpr, tpr, _ = metrics.roc_curve(y_test,  y_pred_proba)
@@ -105,9 +117,10 @@ if __name__ == "__main__":
     lr_model = LogisticRegression()
     lr_model.fit(X_train, y_train)
 
-    plot_result(model=lr_model,
-                X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test,
-                model_name="Logistic regression")
+    fig = plot_result(model=lr_model,
+                      X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test,
+                      model_name="Logistic regression")
+    fig.savefig(os.path.join(FIGURES_DIR, "logistic_regression.png"))
 
     # random forest
     # Instantiate model with 1000 decision trees
@@ -116,6 +129,25 @@ if __name__ == "__main__":
     # Train the model on training data
     rf_model.fit(X_train, y_train)
 
-    plot_result(model=rf_model,
-                X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test,
-                model_name="Random forest")
+    fig = plot_result(model=rf_model,
+                      X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test,
+                      model_name="Random forest")
+    fig.savefig(os.path.join(FIGURES_DIR, "random_forest.png"))
+
+    # xgboost
+    xg_model = xgb.XGBClassifier(
+        objective='binary:logistic',
+        colsample_bytree=0.3,
+        learning_rate=0.1,
+        max_depth=5,
+        alpha=10,
+        n_estimators=10
+    )
+
+    # Train the model on training data
+    xg_model.fit(X_train, y_train)
+
+    fig = plot_result(model=xg_model,
+                      X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test,
+                      model_name="XGBoost")
+    fig.savefig(os.path.join(FIGURES_DIR, "xg_boost.png"))
