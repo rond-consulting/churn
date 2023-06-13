@@ -1,0 +1,3 @@
+#.dockerignore
+# ignore environment variables, they have to be provided when starting the container
+.env

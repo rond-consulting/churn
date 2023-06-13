@@ -3,6 +3,7 @@ channels:
   - conda-forge
   - plotly
   - defaults
+  - sebp
 dependencies:
   - python=3.7
   - pandas=1.2.1
@@ -17,3 +18,5 @@ dependencies:
   - lifelines=0.25.9
   - formulaic=0.2.3
   - scikit-survival=0.14.0
+  - fastapi
+  - uvicorn=0.19
