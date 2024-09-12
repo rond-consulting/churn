@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - plotly
   - defaults
-  - sebp
+  - anaconda
 dependencies:
   - python=3.7
   - pandas=1.2.1
